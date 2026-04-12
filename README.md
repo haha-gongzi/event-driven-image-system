@@ -38,6 +38,7 @@ Redis (Pub/Sub messaging)
 Virtual Environment (venv)
 Event-driven architecture design
 Project Structure
+
 event-driven-image-system/
 │
 ├── app/
@@ -56,6 +57,7 @@ event-driven-image-system/
 │   └── test1.jpg
 │
 └── README.md
+
 Setup Instructions
 1. Clone the Repository
 git clone https://github.com/haha-gongzi/event-driven-image-system.git
