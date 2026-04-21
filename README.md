@@ -1,136 +1,184 @@
 # Event-Driven Image Annotation and Retrieval System
 
 ## Overview
+
 This project implements an event-driven architecture for an image annotation and retrieval system. The system focuses on modular design, loose coupling, and testability rather than machine learning performance.
 
-The project uses a publish-subscribe model in which services communicate through events instead of calling each other directly. This makes the system easier to extend, test, and reason about.
+The system uses a publish-subscribe model where services communicate via events instead of direct function calls. This improves scalability, maintainability, and extensibility.
 
 ---
 
 ## System Architecture
+
 The system is composed of independent services:
 
-- **CLI Service**: publishes `image.submitted`
-- **Inference Service**: listens for submitted images and publishes `inference.completed`
-- **Annotation Service**: stores annotation results and publishes `annotation.stored`
-- **Query Service**: handles retrieval requests and publishes `query.completed`
+* **CLI Service** → publishes `image.submitted`
+* **Inference Service** → processes images and publishes `inference.completed`
+* **Annotation Service** → stores results and publishes `annotation.stored`
+* **Query Service** → retrieves stored data and publishes `query.completed`
 
-Each service operates independently and communicates only through events.
+Each service is loosely coupled and communicates only through events.
+
+---
+
+## Project Structure
+
+```
+app/
+  broker/        # Message broker abstraction (Redis)
+  events/        # Event schemas and topics
+  services/      # Core services (CLI, inference, annotation, query)
+  storage/       # Document store (in-memory)
+
+tests/
+  test_broker.py
+  test_event_schema.py
+  test_idempotency.py
+  test_malformed_events.py
+  test_query.py
+```
 
 ---
 
 ## Event Flow
-The main event pipeline is:
 
-1. `image.submitted`
-2. `inference.completed`
-3. `annotation.stored`
+### Annotation Pipeline
 
-The query path is:
+```
+image.submitted → inference.completed → annotation.stored
+```
 
-1. `query.submitted`
-2. `query.completed`
+### Query Pipeline
 
-Each event contains:
-- `type`
-- `topic`
-- `event_id`
-- `timestamp`
-- `payload`
+```
+query.submitted → query.completed
+```
+
+---
+
+## Event Schema Example
+
+Each event follows a structured format:
+
+```json
+{
+  "type": "event",
+  "topic": "inference.completed",
+  "event_id": "evt_123",
+  "timestamp": "2026-04-21T12:00:00Z",
+  "payload": {
+    "image_id": "img_001",
+    "objects": ["cat", "dog"]
+  }
+}
+```
 
 ---
 
 ## Data Storage
-The project includes a simple in-memory document store that simulates a document-oriented database.
 
-It stores annotations by `image_id` and supports flexible JSON-like records. This design is easier to evolve than a rigid relational schema because different images may contain different objects and nested annotation fields.
+The system uses an in-memory document store to simulate a document-oriented database.
 
-Example record:
+* Data is stored by `image_id`
+* Supports flexible JSON-like schema
+* Allows nested and evolving structures
 
+Example:
+
+```json
 {
   "image_id": "img_001",
   "objects": ["cat", "dog"]
 }
+```
 
 ---
 
 ## Idempotency
-The system is designed so that duplicate events do not create duplicate state.
+
+The system prevents duplicate writes from repeated events.
 
 This is implemented using:
-- a `processed_events` set
-- `event_id` tracking inside the document store
 
-If the same event is received more than once, it is ignored instead of being written again.
+* `processed_events` set
+* `event_id` tracking
+
+If a duplicate event is received, it is ignored.
 
 ---
 
 ## Validation
+
 Incoming events are validated before processing.
 
-The validator checks:
-- required fields
-- valid topic names
-- correct event type
-- correct payload type
+Validation includes:
 
-Malformed events are ignored instead of crashing the service.
+* Required fields check
+* Topic verification
+* Event type validation
+* Payload structure validation
+
+Malformed events are safely ignored.
 
 ---
 
 ## Testing
-The project includes unit tests for:
 
-- event schema creation
-- malformed event handling
-- broker publishing behavior
-- idempotency for duplicate events
+The project includes unit tests covering:
 
-These tests verify the architecture and message contracts, not just the implementation details.
+* Event schema correctness
+* Malformed event handling
+* Broker behavior
+* Idempotency logic
+
+Run tests:
+
+```
+python -m pytest -q
+```
+
+---
+
+## Quick Start
+
+Install dependencies:
+
+```
+pip install -r requirements.txt
+```
+
+Run tests:
+
+```
+python -m pytest -q
+```
 
 ---
 
 ## Design Principles
-This project follows several core software engineering principles:
 
-- **Event-driven architecture** for decoupled services
-- **Loose coupling** between components
-- **Single ownership of data** in the annotation storage layer
-- **Testability** through mocks and isolated unit tests
-- **Fault tolerance** through validation and duplicate-event handling
+* Event-driven architecture
+* Loose coupling between services
+* Single source of truth for annotation storage
+* High testability via unit tests
+* Fault tolerance through validation and idempotency
 
 ---
 
 ## Limitations
-This project does not currently include:
 
-- real machine learning inference
-- persistent database storage
-- vector similarity search
-- retry queues or distributed deployment
-
-The main goal is to demonstrate architecture, messaging, and system behavior.
+* No real ML model (simulated inference)
+* In-memory storage (non-persistent)
+* No distributed deployment
+* No retry mechanism
 
 ---
 
 ## Future Improvements
-Possible extensions include:
 
-- integrating a real document database such as MongoDB
-- adding an embedding service
-- integrating vector search such as FAISS
-- adding retry and failure-injection testing
-- extending the query pipeline for semantic retrieval
-
----
-
-## Requirements
-Install dependencies with:
-
-`pip install -r requirements.txt`
-
-Run tests with:
-
-`python -m pytest -q`
-
+* Replace in-memory store with MongoDB
+* Add embedding-based retrieval
+* Integrate vector search (FAISS)
+* Add retry queues and failure handling
+* Extend query pipeline for semantic search
 
