@@ -1,105 +1,136 @@
 # Event-Driven Image Annotation and Retrieval System
 
 ## Overview
-This project implements an event-driven architecture for an image annotation and retrieval system. The goal is to demonstrate system design principles such as decoupling, scalability, and fault tolerance, rather than building a machine learning model.
+This project implements an event-driven architecture for an image annotation and retrieval system. The system focuses on modular design, loose coupling, and testability rather than machine learning performance.
+
+The project uses a publish-subscribe model in which services communicate through events instead of calling each other directly. This makes the system easier to extend, test, and reason about.
 
 ---
 
 ## System Architecture
-The system is composed of independent services that communicate through events using a publish-subscribe model:
+The system is composed of independent services:
 
-- CLI Service: Publishes image.submitted  
-- Inference Service: Processes images and publishes inference.completed  
-- Annotation Service: Stores results and publishes annotation.stored  
-- Query Service: Handles retrieval requests  
+- **CLI Service**: publishes `image.submitted`
+- **Inference Service**: listens for submitted images and publishes `inference.completed`
+- **Annotation Service**: stores annotation results and publishes `annotation.stored`
+- **Query Service**: handles retrieval requests and publishes `query.completed`
 
-Each service operates independently and does not directly access other services' data.
+Each service operates independently and communicates only through events.
 
 ---
 
 ## Event Flow
-The system follows a sequential event pipeline:
+The main event pipeline is:
 
-1. image.submitted → triggered by CLI  
-2. inference.completed → produced by inference service  
-3. annotation.stored → produced by annotation service  
-4. Query service retrieves stored results  
+1. `image.submitted`
+2. `inference.completed`
+3. `annotation.stored`
+
+The query path is:
+
+1. `query.submitted`
+2. `query.completed`
 
 Each event contains:
-- event_id (unique identifier)  
-- timestamp  
-- payload (data content)  
+- `type`
+- `topic`
+- `event_id`
+- `timestamp`
+- `payload`
 
 ---
 
 ## Data Storage
-A simple in-memory document store is implemented:
+The project includes a simple in-memory document store that simulates a document-oriented database.
 
-- Stores annotations indexed by image_id  
-- Uses a flexible JSON-like structure  
-- Simulates a NoSQL/document database  
+It stores annotations by `image_id` and supports flexible JSON-like records. This design is easier to evolve than a rigid relational schema because different images may contain different objects and nested annotation fields.
 
-Example structure:
+Example record:
 
-{  
-  "image_id": "img_001",  
-  "objects": ["cat", "dog"]  
-}  
+{
+  "image_id": "img_001",
+  "objects": ["cat", "dog"]
+}
 
 ---
 
 ## Idempotency
-The system ensures duplicate events do not create duplicate state.
+The system is designed so that duplicate events do not create duplicate state.
 
 This is implemented using:
-- A processed_events set  
-- Tracking of event_id  
+- a `processed_events` set
+- `event_id` tracking inside the document store
 
-If an event is processed more than once, it is ignored.
+If the same event is received more than once, it is ignored instead of being written again.
+
+---
+
+## Validation
+Incoming events are validated before processing.
+
+The validator checks:
+- required fields
+- valid topic names
+- correct event type
+- correct payload type
+
+Malformed events are ignored instead of crashing the service.
 
 ---
 
 ## Testing
-The system includes unit tests covering:
+The project includes unit tests for:
 
-- Event schema validation  
-- Malformed events handling  
-- Broker behavior (mocked Redis)  
-- Idempotency (duplicate event handling)  
+- event schema creation
+- malformed event handling
+- broker publishing behavior
+- idempotency for duplicate events
 
-All tests pass successfully.
+These tests verify the architecture and message contracts, not just the implementation details.
 
 ---
 
 ## Design Principles
-The system is designed with the following principles:
+This project follows several core software engineering principles:
 
-- Event-driven architecture  
-- Loose coupling between services  
-- Single ownership of data  
-- Testability with mocks  
-- Fault tolerance (duplicate events handled)  
+- **Event-driven architecture** for decoupled services
+- **Loose coupling** between components
+- **Single ownership of data** in the annotation storage layer
+- **Testability** through mocks and isolated unit tests
+- **Fault tolerance** through validation and duplicate-event handling
 
 ---
 
 ## Limitations
-This project does not include:
+This project does not currently include:
 
-- Real machine learning inference  
-- Vector similarity search  
-- Persistent database (in-memory only)  
+- real machine learning inference
+- persistent database storage
+- vector similarity search
+- retry queues or distributed deployment
 
-The focus is on system design rather than AI modeling.
+The main goal is to demonstrate architecture, messaging, and system behavior.
 
 ---
 
 ## Future Improvements
-Potential extensions include:
+Possible extensions include:
 
-- Integrating a real database (e.g., MongoDB)  
-- Adding embedding and vector search (e.g., FAISS)  
-- Implementing asynchronous processing  
-- Adding failure injection and retry mechanisms  
+- integrating a real document database such as MongoDB
+- adding an embedding service
+- integrating vector search such as FAISS
+- adding retry and failure-injection testing
+- extending the query pipeline for semantic retrieval
 
+---
+
+## Requirements
+Install dependencies with:
+
+`pip install -r requirements.txt`
+
+Run tests with:
+
+`python -m pytest -q`
 
 
