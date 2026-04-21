@@ -1,80 +1,105 @@
-# Event-Driven Image Annotation System
+# Event-Driven Image Annotation and Retrieval System
 
 ## Overview
-This project implements an event-driven image annotation system using a publish-subscribe architecture. The goal is to demonstrate system design principles rather than machine learning.
+This project implements an event-driven architecture for an image annotation and retrieval system. The goal is to demonstrate system design principles such as decoupling, scalability, and fault tolerance, rather than building a machine learning model.
 
 ---
 
-## Architecture
+## System Architecture
+The system is composed of independent services that communicate through events using a publish-subscribe model:
 
-The system consists of loosely coupled services:
+- CLI Service: Publishes image.submitted  
+- Inference Service: Processes images and publishes inference.completed  
+- Annotation Service: Stores results and publishes annotation.stored  
+- Query Service: Handles retrieval requests  
 
-- CLI Service → publishes image.submitted
-- Inference Service → processes and publishes inference.completed
-- Annotation Service → stores results and publishes annotation.stored
-- Query Service → handles retrieval requests
-
-Services communicate only via events.
+Each service operates independently and does not directly access other services' data.
 
 ---
 
 ## Event Flow
+The system follows a sequential event pipeline:
 
-image.submitted → inference.completed → annotation.stored
+1. image.submitted → triggered by CLI  
+2. inference.completed → produced by inference service  
+3. annotation.stored → produced by annotation service  
+4. Query service retrieves stored results  
 
 Each event contains:
-- event_id
-- timestamp
-- payload
+- event_id (unique identifier)  
+- timestamp  
+- payload (data content)  
 
 ---
 
 ## Data Storage
+A simple in-memory document store is implemented:
 
-A simple in-memory document store is used:
+- Stores annotations indexed by image_id  
+- Uses a flexible JSON-like structure  
+- Simulates a NoSQL/document database  
 
-- Stores annotations by image_id
-- Supports flexible JSON-like structure
+Example structure:
+
+{  
+  "image_id": "img_001",  
+  "objects": ["cat", "dog"]  
+}  
 
 ---
 
 ## Idempotency
+The system ensures duplicate events do not create duplicate state.
 
-Duplicate events are handled using:
-
-- processed_events set
-- event_id tracking
+This is implemented using:
+- A processed_events set  
+- Tracking of event_id  
 
 If an event is processed more than once, it is ignored.
 
 ---
 
 ## Testing
+The system includes unit tests covering:
 
-The system includes tests for:
-
-- Event schema validation
-- Malformed events
-- Broker behavior (mocked)
-- Idempotency
+- Event schema validation  
+- Malformed events handling  
+- Broker behavior (mocked Redis)  
+- Idempotency (duplicate event handling)  
 
 All tests pass successfully.
 
 ---
 
 ## Design Principles
+The system is designed with the following principles:
 
-- Event-driven architecture
-- Loose coupling
-- Single ownership of data
-- Testability
-- Fault tolerance
+- Event-driven architecture  
+- Loose coupling between services  
+- Single ownership of data  
+- Testability with mocks  
+- Fault tolerance (duplicate events handled)  
 
 ---
 
-## Future Work
+## Limitations
+This project does not include:
 
-- Vector search (FAISS)
-- Embedding service
-- Real database integration
+- Real machine learning inference  
+- Vector similarity search  
+- Persistent database (in-memory only)  
+
+The focus is on system design rather than AI modeling.
+
+---
+
+## Future Improvements
+Potential extensions include:
+
+- Integrating a real database (e.g., MongoDB)  
+- Adding embedding and vector search (e.g., FAISS)  
+- Implementing asynchronous processing  
+- Adding failure injection and retry mechanisms  
+
+
 
