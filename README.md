@@ -1,133 +1,80 @@
 # Event-Driven Image Annotation System
 
 ## Overview
-
-This project implements an **event-driven image processing pipeline** using Redis as a message broker.
-
-The system processes an image through three stages:
-
-1. Image submission (CLI)
-2. Image inference
-3. Annotation storage
+This project implements an event-driven image annotation system using a publish-subscribe architecture. The goal is to demonstrate system design principles rather than machine learning.
 
 ---
 
 ## Architecture
 
-```
-CLI Service → image.submitted
-    ↓
-Inference Service → inference.completed
-    ↓
-Annotation Service → annotation.stored
-```
+The system consists of loosely coupled services:
+
+- CLI Service → publishes image.submitted
+- Inference Service → processes and publishes inference.completed
+- Annotation Service → stores results and publishes annotation.stored
+- Query Service → handles retrieval requests
+
+Services communicate only via events.
 
 ---
 
-## Components
+## Event Flow
 
-### 1. CLI Service
+image.submitted → inference.completed → annotation.stored
 
-* Publishes `image.submitted`
-* Contains image ID and file path
-
-### 2. Inference Service
-
-* Subscribes to `image.submitted`
-* Simulates object detection
-* Publishes `inference.completed`
-
-### 3. Annotation Service
-
-* Subscribes to `inference.completed`
-* Stores annotation results
-* Publishes `annotation.stored`
+Each event contains:
+- event_id
+- timestamp
+- payload
 
 ---
 
-## Technologies
+## Data Storage
 
-* Python 3
-* Redis (Pub/Sub)
-* Virtual Environment (venv)
-* Event-driven architecture
+A simple in-memory document store is used:
 
----
-
-## Project Structure
-
-```
-event-driven-image-system/
-├── app/
-│   ├── broker/
-│   │   └── redis_broker.py
-│   ├── events/
-│   │   ├── schemas.py
-│   │   ├── topics.py
-│   │   └── validators.py
-│   └── services/
-│       ├── cli_service.py
-│       ├── inference_service.py
-│       └── annotation_service.py
-├── images/
-│   └── test1.jpg
-└── README.md
-```
+- Stores annotations by image_id
+- Supports flexible JSON-like structure
 
 ---
 
-## Setup
+## Idempotency
 
-```bash
-git clone https://github.com/haha-gongzi/event-driven-image-system.git
-cd event-driven-image-system
-python3 -m venv venv
-source venv/bin/activate
-pip install redis
-```
+Duplicate events are handled using:
 
----
+- processed_events set
+- event_id tracking
 
-## Start Redis
-
-```bash
-sudo service redis-server start
-```
+If an event is processed more than once, it is ignored.
 
 ---
 
-## Run
+## Testing
 
-Open 3 terminals:
+The system includes tests for:
 
-### Terminal 1
+- Event schema validation
+- Malformed events
+- Broker behavior (mocked)
+- Idempotency
 
-```bash
-PYTHONPATH=. python app/services/inference_service.py
-```
-
-### Terminal 2
-
-```bash
-PYTHONPATH=. python app/services/annotation_service.py
-```
-
-### Terminal 3
-
-```bash
-PYTHONPATH=. python app/services/cli_service.py
-```
+All tests pass successfully.
 
 ---
 
-## Example Output
+## Design Principles
 
-```
-Published image.submitted for img_001
-Processed image img_001 → inference.completed
-Stored annotation for img_001
-```
+- Event-driven architecture
+- Loose coupling
+- Single ownership of data
+- Testability
+- Fault tolerance
 
 ---
 
+## Future Work
+
+- Vector search (FAISS)
+- Embedding service
+- Real database integration
 
